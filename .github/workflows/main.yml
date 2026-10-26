@@ -1,0 +1,45 @@
+name: Bot Leitura Plantao CNP 24h
+
+on:
+  # Permite iniciar manualmente com 1 clique no botão "Run workflow"
+  workflow_dispatch:
+    inputs:
+      qtd_bots:
+        description: 'Quantidade de bots simultâneos'
+        required: false
+        default: '25'
+
+  # Inicia automaticamente um novo turno a cada 6 horas (rodando 24h/dia)
+  schedule:
+    - cron: '0 */6 * * *'
+
+concurrency:
+  group: bot-plantaocnp-group
+  cancel-in-progress: true
+
+jobs:
+  executar-bot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+
+    steps:
+      - name: Baixar código do repositório
+        uses: actions/checkout@v4
+
+      - name: Configurar Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar Playwright e Motor Chromium
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          playwright install --with-deps chromium
+
+      - name: Rodar Bot Plantão CNP (Turno de ~5h45min)
+        env:
+          PYTHONUNBUFFERED: "1"
+          QTD_BOTS: ${{ github.event.inputs.qtd_bots || '25' }}
+        run: |
+          timeout 345m python -u bot_plantaocnp_2bots_analytics.py || true
